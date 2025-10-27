@@ -41,16 +41,27 @@ class SnippetList(mixins.ListModelMixin,
     def perform_create(self, serializer):
         serializer.save(uploader_id=self.request.user)
 
-class FormList(mixins.ListModelMixin,
-                  mixins.CreateModelMixin,
-                  generics.GenericAPIView):
-    queryset = Form_feedback.objects.all()
+class FormList(mixins.CreateModelMixin, # Keep CreateModelMixin for POST
+               generics.GenericAPIView): # Remove ListModelMixin
+    # queryset = Form_feedback.objects.all() # We don't need the full queryset here anymore
     serializer_class = FormSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly,
-                      IsOwnerOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, # Allow GET even if not logged in? Or IsAuthenticated?
+                          IsOwnerOrReadOnly] # IsOwnerOrReadOnly applies to object-level for PUT/PATCH/DELETE, not needed for list
 
+    # Override the GET method
     def get(self, request, *args, **kwargs):
-        return self.list(request, *args, **kwargs)
+        # Ensure the user is authenticated to filter by them
+        if not request.user.is_authenticated:
+            return Response({"detail": "Authentication credentials were not provided."}, status=status.HTTP_401_UNAUTHORIZED)
+            
+        # Filter the queryset for the current logged-in user
+        user_feedback = Form_feedback.objects.filter(filled_by=request.user)
+        
+        # Serialize the filtered data
+        serializer = self.get_serializer(user_feedback, many=True) # Use get_serializer for consistency
+        
+        # Return the response
+        return Response(serializer.data)
 
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
