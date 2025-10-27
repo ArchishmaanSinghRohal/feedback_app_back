@@ -76,8 +76,8 @@ WSGI_APPLICATION = 'a1.wsgi.application'
 # Database
 DATABASES = {
     'default': dj_database_url.config(
-        default='mysql://root:0110@localhost:3306/tbd',
-        conn_max_age=600
+        default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'), # Fallback ONLY for local dev
+        conn_max_age=600 
     )
 }
 
